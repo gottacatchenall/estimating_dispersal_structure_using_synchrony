@@ -79,44 +79,98 @@ dang ol absrtact here
 \clearpage
 \section{Introduction}
 
-\begin{itemize}
-    \item Understanding the dispersal structure of a landscape is important
-    \item Most measures of this are structural connectivity, meaning they are derived from the spatial properties of the landscape
-    \item Functional connectivity is useful because it relates a landscape to a specific process
-    \item We propose a method for measuring functional connectivity of population dynamics
-\end{itemize}
+Understanding the dispersal structure of a landscape is important.
+    There are several ways of measuring landscape connectivity.    
+    Most measures of this are structural connectivity, meaning they are derived from the spatial properties of the landscape
+    Functional connectivity is useful because it relates a landscape to a specific process
+We propose a method for measuring functional connectivity of population dynamics. We do this using synchrony. 
 
-\section{model}
+The correlation structure of the pairwise comparisons of each time-series encodes information about how those time-series could be related. 
 
-\begin{itemize}
-    \item abc sampler to infer dispersal potential
-    \item uses isolation-by-distance to propose $\Phi$
-    \item we use a stochastic logistic model to generate trajectories of abundances
-    \item generate matrix of pairwise synchronies, $CC$
-    \item measure distance of matrix from data 
-\end{itemize}
+What causes synchrony? Some combination of correlation in the environment and dispersal. 
+We represent the dispersal structure of a landscape using a spatial graph. Here edges represent what we call 
+the \textit{dispersal potential}, which is a matrix of edge-weights $\Phi$, where $\Phi_{ij}$ is the probability that an individual born at location $i$ reproduces at location $j$. This is the object of inference in our model. 
 
+\section{The Model}
 
-\section{testing the models performance}
+The goal of the model is to infer the dispersal potential $\Phi$ given some time-series of abundances $A_i(t)$ across a set of spatial locations, $L$.
 
-\begin{itemize}
-    \item use an individual based model which incorporates stochasticity and a level below our SDE
-    \item how much data does it take to get accurate estimates of the dispersal structure? 
-\end{itemize}
+We have a set of priors $P(\theta)$ and want to infer $P(\theta | A, L)$. Writing down the likelihood function, $P(A | \theta, L)$ is mostly intractable for real landscapes. So, we use a simulation model to generate a pseudolikelihood function. 
 
 
+\subsection{A Generative Model of Candidate Dispersal Potentials}
 
-\section{caveats}
-\subsection{Caveats with things we are not inferring}
-\begin{itemize}
-    \item How does our information about local 'carrying capacity', dmeographic stochasticity
-        effect our inference? 
-\end{itemize}
+What are the objects of inference, $\theta$? We know that the primary goal of this 
+is to infer $\Phi$, which is a matrix where every row is a probability distribution.
+Sure, we could set our priors to be ten different Dirichlet distributions, but this requires
+inferring a lot separate parameters, and it does not incorporate any of our knowledge about the landscape--i.e. more distant locations tend to have less likely dispersal than closer locations.
 
+
+Take $\alpha$, $\epsilon$, and dispersal kernel, and generate $\Phi$.
+
+Instead, estimate $\alpha$ and $\epsilon$, and draw from them to generate a
+posterior distribution of dispersal potentials, $P(\Phi | A(t), L)$.
+
+
+\subsection{A Generative Model of Metapopulation Dynamics}
+
+We use a stochastic-logistic model locally, where diffusion occurs according to a reaction-diffusion model.
+
+
+
+\subsection{Measuring Synchrony}
+
+To measure the synchrony between two abundance trajectories, we use the crosscorrelation function $CC$, which has long been used for this purpose. 
+
+
+\subsection{Approximate Bayesian Computation (ABC) Sampler}
+
+We then implement an Approximate Bayesian Computation (ABC) Sampler to infer
+the values of the parameters $\theta$ given a set of locations $L$ and observations of 
+abundances, $A(t)$. 
+
+The goal of the sampler is to estimate $P(\theta | A(t), L)$. We do this by measuring a sample $\pi$ from this distribution, which 
+
+The sampler runs a loop, where $\forall s \in \{0,1,\dots,N_s\}$: 
+\begin{enumerate}
+    \item Draws a candidate value of $\theta \sim \text{Priors}$
+    \item Construct a dispersal potential from $\theta$.
+    \item Runs the generative stochastic-logistic model for $N_t$ timesteps
+    \item Computes the synchrony matrix $S$ for the stochastic-logistic generated data
+    \item Computes the distance $d$ between the stochastic-logistic synchrony matrix $S$ and the empirical synchrony matrix $\hat{S}$
+    \item Accepts $\pi[s] = \theta$ and w.p proportional to $s$ if $d  < \rho$, otherwise does nothing.
+\end{enumerate}
+
+Caveats about convergence etc. 
+
+
+
+\section{Testing the Model's Performance}
+
+
+\subsection{An IBM to generate test data}
+
+How do we know that our model makes accurate estimates about the dispersal structure of a landscape? One case would be to test it against experimental data where dispersal is highly controlled. However, given the limitation on data of this type, we use a simulation model where dispersal takes place on a smaller scale than our model of inference. This allows us to know some `ground truth' information about the process generating a set of abundance data $A(t)$.
+
+We know that in real systems the factors that contribute to the stochasticity of population dynamics are varied \cite{melbourne_2008}.
+Here, we implement an IBM Ricker model with different levels of stochasticity \cite{melbourne}. 
+
+Dispersal occurs stochastically on the level of the individual---for each individual in the model whether that individual migrates , 
+
+occurs according to a `true` dispersal potential $\Phi$. Each node's dispersal potential is drawn from a Dirichlet. 
+
+
+\subsection{How many temporal observations does it need? }
+
+\subsection{What if there is variance in parameters across populations?}
+
+\subsection{What if there are multiple factors contributing to demographic stochasticity?}
 
 
 
 \section{Conclusion}
+
+Replace stochastic-logistic and run it on covid data
 
 \clearpage
 {
